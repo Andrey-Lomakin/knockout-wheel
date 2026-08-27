@@ -2,10 +2,12 @@ import { useState } from 'react';
 
 interface AddParticipantsProps {
   onAdd: (names: string[]) => void;
+  /** Добавление заблокировано на время спина. */
+  locked: boolean;
 }
 
 /** Быстрое добавление участников списком (по имени в строке). */
-export default function AddParticipants({ onAdd }: AddParticipantsProps) {
+export default function AddParticipants({ onAdd, locked }: AddParticipantsProps) {
   const [bulkText, setBulkText] = useState('');
 
   const handleAdd = () => {
@@ -24,8 +26,9 @@ export default function AddParticipants({ onAdd }: AddParticipantsProps) {
         value={bulkText}
         onChange={(e) => setBulkText(e.target.value)}
         rows={5}
+        disabled={locked}
       />
-      <button className="btn" onClick={handleAdd}>
+      <button className="btn" onClick={handleAdd} disabled={locked}>
         Добавить
       </button>
     </section>

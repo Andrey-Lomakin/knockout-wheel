@@ -11,7 +11,7 @@ export default function App() {
   const game = useWheelGame();
   const { replaceParticipants } = game;
 
-  // Применяет список из URL, если параметр `users` изменился (защита от повторов).
+  // Какой `search` уже применяли — чтобы та же ссылка не заменяла список повторно.
   const appliedSearchRef = useRef<string | null>(null);
 
   const applyFromUrl = useCallback(() => {
@@ -19,10 +19,10 @@ export default function App() {
     if (search === appliedSearchRef.current) return;
     const names = parseShareNames(search);
     if (names) {
+      appliedSearchRef.current = search;
       replaceParticipants(names);
       // Убираем параметры из URL, чтобы при обновлении не вернулись старые юзеры.
       clearShareParams();
-      appliedSearchRef.current = '';
     }
   }, [replaceParticipants]);
 
@@ -33,11 +33,17 @@ export default function App() {
     return () => window.removeEventListener('popstate', applyFromUrl);
   }, [applyFromUrl]);
 
-  const handleShare = useCallback(() => {
+  // Возвращает, действительно ли ссылка попала в буфер обмена: на http и без разрешения
+  // clipboard недоступен, и сообщать об успехе в этом случае нельзя.
+  const handleShare = useCallback(async (): Promise<boolean> => {
     const names = game.participants.map((p) => p.name.trim()).filter(Boolean);
-    if (names.length === 0) return;
-    const url = buildShareUrl(names);
-    navigator.clipboard?.writeText(url).catch(() => {});
+    if (names.length === 0) return false;
+    try {
+      await navigator.clipboard.writeText(buildShareUrl(names));
+      return true;
+    } catch {
+      return false;
+    }
   }, [game.participants]);
 
   return (
@@ -52,11 +58,12 @@ export default function App() {
       <div className="layout">
         <aside className="panel">
           <MusicPlayer />
-          <AddParticipants onAdd={game.addParticipants} />
+          <AddParticipants onAdd={game.addParticipants} locked={game.spinning} />
           <ParticipantList
             participants={game.participants}
             eliminatedIds={game.eliminatedIds}
             podium={game.podium}
+            locked={game.spinning}
             onRename={game.rename}
             onWeight={game.setWeight}
             onToggle={game.toggleEnabled}

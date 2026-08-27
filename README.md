@@ -1,28 +1,49 @@
-# Knockout Wheel
+# Колесо выбивания
 
-A random **elimination wheel** for streams: add participants, spin, and knock them out one by one until the last one stands.
+**▶ [andrey-lomakin.github.io/knockout-wheel](https://andrey-lomakin.github.io/knockout-wheel/)**
 
-## Features
+Колесо для стримов: добавляешь участников, крутишь — и оно выбивает их по одному,
+пока не останется последний. Победитель, второе и третье места отмечаются медалями
+прямо в списке.
 
-- 🎡 **Weighted canvas wheel** — segments sized proportionally to each participant's weight (×1 / ×2).
-- 🔥 **Knockout rounds** — spin to knock a participant out; keeps going until a single winner remains.
-- 🏅 **Medals in the list** — 1st/2nd/3rd place shown right in the participant list (🥇🥈🥉).
-- ✋/🙈 **Manual toggle** — decide who takes part in the wheel for this round.
-- ⏱️ **Spin duration** — 3 / 5 / 7 / 13 seconds.
-- 🎉 **Confetti** — on podium places (canvas-confetti).
-- 🎬 **Meme overlays** — a random looping meme plays in the center button while spinning; final winner gets a meme too.
-- 🔗 **Share by link** — `?users=...` replaces the roster for anyone opening it.
-- 💾 **localStorage** — only the participant list persists; round results are per-session.
-- 🎵 **Yandex Music player** — embed any track by its link (`music.yandex.ru/album/.../track/...`).
+## Возможности
 
-## Stack
+- 🎡 **Колесо на canvas** — сектор рисуется пропорционально весу участника (×1 / ×2).
+- 🔥 **Раунд на выбывание** — каждый спин кого-то выбивает; раунд идёт до единственного выжившего.
+- ⚖️ **Вес ×1 / ×2** — ×2 даёт **вдвое больший сектор, то есть вдвое больший шанс вылететь**.
+- 🤖 **Авто-прокрутка** — галочка «Автоматическая прокрутка»: спины идут сами, с паузой 2 секунды,
+  пока не определится победитель. См. [авто-прокрутку](./user-flow/auto-spin-flow.md).
+- 🏅 **Медали в списке** — 🥇🥈🥉 показываются в строках участников (по id, так что тёзки их не делят).
+- 🔒 **Список заблокирован во время спина** — состав колеса не может измениться посреди вращения.
+- ✋ / 🙈 **Ручное включение** — кто вообще участвует в колесе. Это отдельный от выбывания флаг, он сохраняется.
+- ⏱️ **Длительность спина** — 3 / 5 / 7 / 13 секунд.
+- 🎉 **Конфетти** — на 1-м и 3-м местах.
+- 🎬 **Мемы** — на время спина центральная кнопка превращается в случайное зацикленное видео;
+  победителю тоже достаётся мем.
+- 🔗 **Ссылка со списком** — `?users=[...]`: у того, кто её откроет, список заменится на присланный.
+- 💾 **localStorage** — переживает перезагрузку **только состав и ✋/🙈** (имя + включён ли человек).
+  Веса, выбывшие и медали — нет: это состояние текущего раунда.
+- 🎵 **Яндекс Музыка** — встроенный плеер по ссылке на трек.
+
+## Как играть
+
+1. Вставить имена в «Добавить участников» — по одному в строке — и нажать **«Добавить»**.
+2. Нажать **«Крутить»** в центре колеса. Тот, на кого встанет указатель, **выбывает**.
+3. Повторять, пока не останется один: он получает 🥇, выбитый перед ним — 🥈,
+   а тот, кого выбили при трёх оставшихся, — 🥉.
+4. **«Новый раунд»** сбрасывает выбывших и медали, список участников остаётся.
+
+Чтобы не кликать каждый раз, включи галочку **«Автоматическая прокрутка»** и нажми «Крутить» —
+дальше колесо докрутит раунд до победителя само, показывая между спинами мем.
+
+## Стек
 
 - Vite + React 19 + TypeScript
-- Canvas rendering + `requestAnimationFrame`
+- canvas + `requestAnimationFrame`
 - canvas-confetti
-- vitest (unit tests) for the pure game/model logic
+- vitest + Testing Library (jsdom) — юнит-тесты чистой логики и компонентные тесты
 
-## Getting started
+## Локальный запуск
 
 ```bash
 pnpm install
@@ -32,17 +53,32 @@ pnpm lint     # eslint . --max-warnings 0
 pnpm test     # vitest run
 ```
 
-> pnpm 11: the esbuild install policy and `verifyDepsBeforeRun: false` live in `pnpm-workspace.yaml`.
+> pnpm 11: политика install-скриптов esbuild и `verifyDepsBeforeRun: false` живут
+> в `pnpm-workspace.yaml`, а не в `package.json`.
 
-## Architecture
+## Архитектура
 
-The logic is split into clean, testable layers:
+Логика разложена по слоям так, чтобы её можно было тестировать без React:
 
-- `src/game/` — domain state, storage and pure elimination model (`model.ts`).
-- `src/hooks/` — reusable hooks (`useLatest`, `useWheelAnimation`, `useMemes`, `useMusicPlayer`).
-- `src/wheel/` — pure wheel geometry/drawing + canvas component (`wheelModel`, `wheelDraw`, `Wheel`).
-- `src/participants/` — roster components.
-- `src/music/` — Yandex Music player components + hook.
-- `src/lib/` — pure helpers (share, memes, confetti, yandexMusic).
+- `src/game/` — состояние (`useWheelGame`), хранилище (`storage`) и **чистая модель выбивания** (`model.ts`).
+- `src/hooks/` — переиспользуемые хуки (`useLatest`, `useWheelAnimation`, `useMemes`).
+- `src/wheel/` — чистая геометрия и отрисовка (`wheelModel`, `wheelDraw`) + canvas-компонент `Wheel`.
+- `src/participants/` — список участников.
+- `src/music/` — плеер Яндекс Музыки.
+- `src/lib/` — чистые помощники (`share`, `memes`, `confetti`, `yandexMusic`).
 
-Unit tests live next to the pure logic (`*.test.ts`).
+Победитель спина выбирается **до** анимации (`pickWeightedIndex`), после чего колесо доворачивается
+так, чтобы его сектор встал под указатель. Анимация только раскрывает уже принятое решение.
+
+Тесты лежат рядом с кодом: `*.test.ts` — чистая логика, `*.test.tsx` — хук игры и компоненты
+(Testing Library поверх jsdom). Общая настройка окружения — в `src/test/setup.ts`.
+
+## Документация
+
+Пользовательские сценарии — в [`user-flow/`](./user-flow/README.md).
+Правила работы с репозиторием для AI-агентов — в [`AGENTS.md`](./AGENTS.md).
+
+## Деплой
+
+GitHub Pages, workflow `.github/workflows/deploy.yml` (пуш в `main` → сборка → публикация).
+Сборка идёт с `base: './'`, поэтому приложение работает из подпапки и на любом статическом хостинге.

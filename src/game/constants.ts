@@ -6,6 +6,9 @@ export const EMPTY_PODIUM: Podium = [null, null, null];
 /** Доступные веса. */
 export const WEIGHTS: Weight[] = [1, 2];
 
+/** Вес по умолчанию: с ним создаётся новый участник и с ним же список поднимается из хранилища. */
+export const DEFAULT_WEIGHT: Weight = 1;
+
 /** Доступные длительности вращения (сек). */
 export const SPIN_DURATIONS = [3, 5, 7, 13];
 

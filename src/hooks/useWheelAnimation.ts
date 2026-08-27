@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { WheelParticipant } from '../game/types';
 import useLatest from './useLatest';
 import { buildSegments, computeTargetRotation, easeOutCubic, pickWeightedIndex } from '../wheel/wheelModel';
 
 interface UseWheelAnimationParams {
-  /** Ref с актуальными участниками колеса. */
-  participantsRef: MutableRefObject<WheelParticipant[]>;
-  /** Ref с длительностью спина (сек). */
-  durationRef: MutableRefObject<number>;
-  /** Ref с флагом «идёт спин». */
-  spinningRef: MutableRefObject<boolean>;
+  /** Актуальный состав колеса. */
+  participants: WheelParticipant[];
+  /** Длительность спина (сек). */
+  durationSec: number;
+  /** Идёт ли спин прямо сейчас. */
+  spinning: boolean;
   onSpinStart: () => void;
   onSpinEnd: (p: WheelParticipant) => void;
   /** Вызывается, когда начался спин (например, показать мем). */
@@ -20,7 +20,7 @@ interface UseWheelAnimationParams {
 
 /**
  * Управляет анимацией спина колеса на requestAnimationFrame.
- * Возвращает текущий угол поворота и метод запуска. Данные читаются через refs,
+ * Возвращает текущий угол поворота и метод запуска. Параметры читаются через `useLatest`,
  * чтобы колбэки не замыкали устаревшие значения.
  */
 export function useWheelAnimation(params: UseWheelAnimationParams) {
@@ -30,17 +30,18 @@ export function useWheelAnimation(params: UseWheelAnimationParams) {
   const animRef = useRef(0);
 
   const runSpin = useCallback(() => {
-    const { participantsRef, durationRef, spinningRef, onSpinStart, onSpinEnd, onMemeStart, onMemeEnd } =
-      paramsRef();
+    const { participants, durationSec, spinning, onSpinStart, onSpinEnd, onMemeStart, onMemeEnd } = paramsRef();
 
-    if (spinningRef.current || participantsRef.current.length === 0) return;
+    if (spinning || participants.length === 0) return;
 
-    const list = participantsRef.current;
+    // Состав фиксируется на старте: победитель и целевой угол считаются по нему же,
+    // иначе указатель и объявленный выбывший могли бы разойтись.
+    const list = participants;
     const index = pickWeightedIndex(list);
     const segments = buildSegments(list);
     const segment = segments[index];
     const target = computeTargetRotation(rotationRef.current, segment);
-    const duration = durationRef.current * 1000;
+    const duration = durationSec * 1000;
     const startTime = performance.now();
     const from = rotationRef.current;
 

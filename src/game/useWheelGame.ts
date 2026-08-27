@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AUTO_SPIN_PAUSE_MS, EMPTY_PODIUM } from './constants';
-import { createEntry, loadState, persistState, restoreIdCounter } from './storage';
-import { computeElimination } from './model';
+import { AUTO_SPIN_PAUSE_MS } from './constants';
+import { createEntry, loadState, persistState } from './storage';
+import { computeElimination, nextAutoAction, selectPodium } from './model';
 import { celebratePlace, celebrateWinner } from '../lib/confetti';
 import useLatest from '../hooks/useLatest';
-import type { Participant, Podium, Weight, WheelParticipant } from './types';
+import type { Participant, Weight, WheelParticipant } from './types';
 
 /**
  * Вся логика игры «Колесо выбивания»: состояние, действия и выбранные данные.
  * Компоненты получают только то, что им нужно, через пропсы.
+ *
+ * Подиум НЕ хранится: он выводится из состава и порядка выбывания (`selectPodium`),
+ * поэтому не расходится с реальностью при изменении `enabled` по ходу раунда.
  *
  * Авто-прокрутка: когда включена, после каждого спина (через `handleSpinEnd`)
  * через паузу `AUTO_SPIN_PAUSE_MS` автоматически запускается следующий, пока
@@ -17,11 +20,10 @@ import type { Participant, Podium, Weight, WheelParticipant } from './types';
  */
 export function useWheelGame() {
   const [participants, setParticipants] = useState<Participant[]>(() => loadState().participants);
-  // Подиум живёт только в рамках сессии — после перезагрузки страницы сбрасывается.
-  const [podium, setPodium] = useState<Podium>(EMPTY_PODIUM);
   const [spinning, setSpinning] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
   const [spinDuration, setSpinDuration] = useState(5);
+  // Порядок выбывания живёт только в рамках сессии — после перезагрузки сбрасывается.
   const [eliminatedIds, setEliminatedIds] = useState<string[]>([]);
 
   // Авто-прокрутка и сигнал запуска спина для колеса.
@@ -35,12 +37,6 @@ export function useWheelGame() {
 
   const latestParticipants = useLatest(participants);
   const latestEliminated = useLatest(eliminatedIds);
-  const latestPodium = useLatest(podium);
-
-  // Синхронизируем счётчик id после загрузки.
-  useEffect(() => {
-    restoreIdCounter(participants);
-  }, [participants]);
 
   // Персистим только список участников. Выбывшие и подиум НЕ персистятся:
   // после перезагрузки все снова активны и результаты сброшены.
@@ -49,15 +45,18 @@ export function useWheelGame() {
   }, [participants]);
 
   // Активные участники текущего раунда (включены и не выбыли).
-  const activeParticipants = useMemo(
-    () => participants.filter((p) => p.enabled && !eliminatedIds.includes(p.id)),
-    [participants, eliminatedIds],
-  );
+  const activeParticipants = useMemo(() => {
+    const out = new Set(eliminatedIds);
+    return participants.filter((p) => p.enabled && !out.has(p.id));
+  }, [participants, eliminatedIds]);
 
   const wheelParticipants: WheelParticipant[] = useMemo(
     () => activeParticipants.map((p) => ({ id: p.id, name: p.name, weight: p.weight })),
     [activeParticipants],
   );
+
+  // Подиум — производная величина, не состояние.
+  const podium = useMemo(() => selectPodium(participants, eliminatedIds), [participants, eliminatedIds]);
 
   // Отменяем запланированный авто-спин.
   const cancelAutoTimer = useCallback(() => {
@@ -96,24 +95,30 @@ export function useWheelGame() {
     setAutoSpin(false);
   }, [cancelAutoTimer]);
 
-  const addParticipants = useCallback((names: string[]) => {
-    if (names.length === 0) return;
-    stopAuto();
-    setParticipants((prev) => [...prev, ...names.map((n) => createEntry(n))]);
-    setEliminatedIds([]);
-    setPodium(EMPTY_PODIUM);
-    setLastResult(null);
-  }, [stopAuto]);
+  const addParticipants = useCallback(
+    (names: string[]) => {
+      if (names.length === 0) return;
+      stopAuto();
+      const entries = names.map((n) => createEntry(n));
+      setParticipants((prev) => [...prev, ...entries]);
+      setEliminatedIds([]);
+      setLastResult(null);
+    },
+    [stopAuto],
+  );
 
   // Заменяет весь список участников новыми (используется при открытии шаринг-ссылки).
-  const replaceParticipants = useCallback((names: string[]) => {
-    if (names.length === 0) return;
-    stopAuto();
-    setParticipants(names.map((n) => createEntry(n)));
-    setEliminatedIds([]);
-    setPodium(EMPTY_PODIUM);
-    setLastResult(null);
-  }, [stopAuto]);
+  const replaceParticipants = useCallback(
+    (names: string[]) => {
+      if (names.length === 0) return;
+      stopAuto();
+      const entries = names.map((n) => createEntry(n));
+      setParticipants(entries);
+      setEliminatedIds([]);
+      setLastResult(null);
+    },
+    [stopAuto],
+  );
 
   const rename = useCallback((id: string, name: string) => {
     setParticipants((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
@@ -129,20 +134,19 @@ export function useWheelGame() {
 
   const remove = useCallback((id: string) => {
     setParticipants((prev) => prev.filter((p) => p.id !== id));
+    setEliminatedIds((prev) => prev.filter((eliminatedId) => eliminatedId !== id));
   }, []);
 
   const clear = useCallback(() => {
     stopAuto();
     setParticipants([]);
     setEliminatedIds([]);
-    setPodium(EMPTY_PODIUM);
     setLastResult(null);
   }, [stopAuto]);
 
   const resetRound = useCallback(() => {
     stopAuto();
     setEliminatedIds([]);
-    setPodium(EMPTY_PODIUM);
     setLastResult(null);
   }, [stopAuto]);
 
@@ -165,16 +169,9 @@ export function useWheelGame() {
     (p: WheelParticipant) => {
       setSpinning(false);
 
-      // Чистая логика выбивания: выбывший, подсчёт активных, результат и подиум.
-      const outcome = computeElimination(
-        latestParticipants(),
-        latestEliminated(),
-        latestPodium(),
-        p.id,
-        p.name,
-      );
+      // Чистая логика выбивания: выбывший, подсчёт активных и результат.
+      const outcome = computeElimination(latestParticipants(), latestEliminated(), p.id, p.name);
       setEliminatedIds(outcome.eliminatedIds);
-      setPodium(outcome.podium);
       setLastResult(outcome.lastResult);
 
       // Побочные эффекты (конфетти) — отдельно от чистой модели.
@@ -184,16 +181,21 @@ export function useWheelGame() {
         celebratePlace();
       }
 
-      // Авто-прокрутка: продолжаем, пока активных больше одного и последовательность идёт.
-      if (outcome.stillActive > 1) {
-        if (autoSpinRef() && autoActiveRef()) scheduleNextAutoSpin();
-      } else {
-        // Дошли до победителя (или все выбыли) — останавливаем авто полностью.
-        setAutoActive(false);
-        setAutoSpin(false);
+      // Авто-прокрутка: решение — чистая функция, тут только исполнение.
+      switch (nextAutoAction(outcome.stillActive, autoSpinRef(), autoActiveRef())) {
+        case 'schedule':
+          scheduleNextAutoSpin();
+          break;
+        case 'stop':
+          // Дошли до победителя (или все выбыли) — останавливаем авто полностью.
+          setAutoActive(false);
+          setAutoSpin(false);
+          break;
+        case 'idle':
+          break;
       }
     },
-    [latestParticipants, latestEliminated, latestPodium, autoSpinRef, autoActiveRef, scheduleNextAutoSpin],
+    [latestParticipants, latestEliminated, autoSpinRef, autoActiveRef, scheduleNextAutoSpin],
   );
 
   return {

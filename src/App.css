@@ -524,6 +524,27 @@
   pointer-events: none;
 }
 
+/* Заблокированное состояние: список не редактируется, пока крутится колесо. */
+.row button:disabled,
+.btn:disabled,
+.link-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bulk:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.row-name[readonly] {
+  cursor: default;
+}
+
+.link-btn.failed {
+  color: #f87171;
+}
+
 @media (max-width: 860px) {
   .layout {
     grid-template-columns: 1fr;

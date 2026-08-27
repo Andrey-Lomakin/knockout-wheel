@@ -6,6 +6,8 @@ interface ParticipantRowProps {
   index: number;
   isOut: boolean;
   medal: string | null;
+  /** Строка заблокирована на время спина. */
+  locked: boolean;
   onRename: (id: string, name: string) => void;
   onWeight: (id: string, weight: Weight) => void;
   onToggle: (id: string) => void;
@@ -18,6 +20,7 @@ export default function ParticipantRow({
   index,
   isOut,
   medal,
+  locked,
   onRename,
   onWeight,
   onToggle,
@@ -29,7 +32,7 @@ export default function ParticipantRow({
     <li className={rowClass}>
       <span className="idx">{index + 1}.</span>
       {medal && (
-        <span className="medal" title={`Место в раунде`}>
+        <span className="medal" title="Место в раунде">
           {medal}
         </span>
       )}
@@ -37,6 +40,7 @@ export default function ParticipantRow({
         className="row-name"
         value={p.name}
         onChange={(e) => onRename(p.id, e.target.value)}
+        readOnly={locked}
         aria-label={`Имя участника ${index + 1}`}
       />
       {isOut && !medal && <span className="out-badge">выбыл</span>}
@@ -46,8 +50,8 @@ export default function ParticipantRow({
             key={w}
             className={`weight ${p.weight === w ? 'active' : ''}`}
             onClick={() => onWeight(p.id, w)}
-            title={`Вес x${w}`}
-            disabled={!p.enabled}
+            title={`Вес x${w} — во столько раз больше шанс вылететь`}
+            disabled={!p.enabled || locked}
           >
             x{w}
           </button>
@@ -57,10 +61,11 @@ export default function ParticipantRow({
         className={`toggle ${p.enabled ? 'on' : 'off'}`}
         onClick={() => onToggle(p.id)}
         title={p.enabled ? 'Выключить (не участвует в колесе)' : 'Включить'}
+        disabled={locked}
       >
         {p.enabled ? '✋' : '🙈'}
       </button>
-      <button className="remove" onClick={() => onRemove(p.id)} title="Удалить">
+      <button className="remove" onClick={() => onRemove(p.id)} title="Удалить" disabled={locked}>
         ✕
       </button>
     </li>

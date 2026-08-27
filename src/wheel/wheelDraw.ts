@@ -5,18 +5,28 @@ export function truncate(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1) + '…' : text;
 }
 
-/** Чистая отрисовка колеса на canvas при заданном повороте. */
+/**
+ * Чистая отрисовка колеса на canvas при заданном повороте.
+ * `size` — CSS-размер стороны в пикселях; приходит снаружи (из ResizeObserver),
+ * чтобы не читать `clientWidth` на каждом кадре и не вызывать лишний reflow.
+ * Бэкбуфер переустанавливается только когда размер реально изменился.
+ */
 export function drawWheel(
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
+  size: number,
   segments: Segment[],
   names: string[],
   rotation: number,
 ): void {
+  if (size <= 0) return;
+
   const dpr = window.devicePixelRatio || 1;
-  const size = canvas.clientWidth;
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
+  const pixels = Math.round(size * dpr);
+  if (canvas.width !== pixels || canvas.height !== pixels) {
+    canvas.width = pixels;
+    canvas.height = pixels;
+  }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const cx = size / 2;

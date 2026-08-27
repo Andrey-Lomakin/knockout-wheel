@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { WheelParticipant } from '../game/types';
 import { useWheelAnimation } from '../hooks/useWheelAnimation';
 import { useMemes } from '../hooks/useMemes';
@@ -12,14 +12,14 @@ interface WheelProps {
   durationSec: number;
   /** Идёт ли последовательность авто-спинов. */
   autoRunning: boolean;
-  /** Инкрементируется при каждом запросе списка (кнопка или авто). */
+  /** Инкрементируется при каждом запросе спина (кнопка или авто). */
   spinSignal: number;
   onSpinRequest: () => void;
   onSpinStart: () => void;
   onSpinEnd: (winner: WheelParticipant) => void;
 }
 
-/** Canvas-колесо: рисует сегменты и анимирует вращение. Данные — через refs (без устаревших замыканий). */
+/** Canvas-колесо: рисует сегменты и анимирует вращение. */
 export default function Wheel({
   participants,
   spinning,
@@ -31,26 +31,20 @@ export default function Wheel({
   onSpinEnd,
 }: WheelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // CSS-размер стороны канваса; обновляется по ResizeObserver, а не читается каждый кадр.
+  const [size, setSize] = useState(0);
 
-  // Актуальные значения для анимации — читаются из refs внутри хука.
-  const participantsRef = useRef(participants);
-  participantsRef.current = participants;
-  const durationRef = useRef(durationSec);
-  durationRef.current = durationSec;
-  const spinningRef = useRef(spinning);
-  spinningRef.current = spinning;
-
-  const { spinVideo, showRandom, hide } = useMemes();
+  const { spinVideo, hasVideos, showRandom, hide } = useMemes();
   const { rotation, runSpin } = useWheelAnimation({
-    participantsRef,
-    durationRef,
-    spinningRef,
+    participants,
+    durationSec,
+    spinning,
     onSpinStart,
     onSpinEnd,
     onMemeStart: showRandom,
     // Во время авто-последовательности мем спина остаётся на паузе (тот же), не очищаем.
     // В ручном режиме — очищаем после каждого спина.
-    onMemeEnd: autoRunning ? () => {} : hide,
+    onMemeEnd: autoRunning ? undefined : hide,
   });
 
   // Запускаем спин по каждому новому сигналу (защита от двойного запуска в StrictMode).
@@ -62,24 +56,47 @@ export default function Wheel({
     }
   }, [spinSignal, runSpin]);
 
+  // Следим за реальным размером канваса — иначе после ресайза окна колесо оставалось бы
+  // нарисованным в старом разрешении до следующего спина.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const update = () => setSize(canvas.clientWidth);
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
+
   const segments = useMemo(() => buildSegments(participants), [participants]);
 
   // Победитель: остался ровно один участник → вместо кнопки показываем мем.
   const isChampion = participants.length === 1;
 
   // Когда определился победитель — подхватываем случайный зацикленный мем.
+  // `hasVideos` в зависимостях обязателен: победитель мог определиться раньше, чем загрузился
+  // манифест, и без этого он навсегда остался бы с запасным 🏆.
   useEffect(() => {
-    if (isChampion && !spinVideo) showRandom();
-  }, [isChampion, spinVideo, showRandom]);
+    if (isChampion && hasVideos && !spinVideo) showRandom();
+  }, [isChampion, hasVideos, spinVideo, showRandom]);
 
-  // Отрисовка колеса при каждом изменении поворота/сегментов.
+  // Отрисовка колеса при изменении поворота, состава или размера.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    drawWheel(canvas, ctx, segments, participants.map((p) => p.name), rotation);
-  }, [segments, participants, rotation]);
+    drawWheel(
+      canvas,
+      ctx,
+      size,
+      segments,
+      participants.map((p) => p.name),
+      rotation,
+    );
+  }, [segments, participants, rotation, size]);
 
   // Если авто выключили (не победитель, не крутим) — убираем мем, чтобы вернуть «Крутить».
   useEffect(() => {
