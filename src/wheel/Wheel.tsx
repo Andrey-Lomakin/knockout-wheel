@@ -10,12 +10,26 @@ interface WheelProps {
   participants: WheelParticipant[];
   spinning: boolean;
   durationSec: number;
+  /** Идёт ли последовательность авто-спинов. */
+  autoRunning: boolean;
+  /** Инкрементируется при каждом запросе списка (кнопка или авто). */
+  spinSignal: number;
+  onSpinRequest: () => void;
   onSpinStart: () => void;
   onSpinEnd: (winner: WheelParticipant) => void;
 }
 
 /** Canvas-колесо: рисует сегменты и анимирует вращение. Данные — через refs (без устаревших замыканий). */
-export default function Wheel({ participants, spinning, durationSec, onSpinStart, onSpinEnd }: WheelProps) {
+export default function Wheel({
+  participants,
+  spinning,
+  durationSec,
+  autoRunning,
+  spinSignal,
+  onSpinRequest,
+  onSpinStart,
+  onSpinEnd,
+}: WheelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Актуальные значения для анимации — читаются из refs внутри хука.
@@ -34,8 +48,19 @@ export default function Wheel({ participants, spinning, durationSec, onSpinStart
     onSpinStart,
     onSpinEnd,
     onMemeStart: showRandom,
-    onMemeEnd: hide,
+    // Во время авто-последовательности мем спина остаётся на паузе (тот же), не очищаем.
+    // В ручном режиме — очищаем после каждого спина.
+    onMemeEnd: autoRunning ? () => {} : hide,
   });
+
+  // Запускаем спин по каждому новому сигналу (защита от двойного запуска в StrictMode).
+  const handledSignalRef = useRef(spinSignal);
+  useEffect(() => {
+    if (spinSignal > 0 && spinSignal !== handledSignalRef.current) {
+      handledSignalRef.current = spinSignal;
+      runSpin();
+    }
+  }, [spinSignal, runSpin]);
 
   const segments = useMemo(() => buildSegments(participants), [participants]);
 
@@ -56,6 +81,14 @@ export default function Wheel({ participants, spinning, durationSec, onSpinStart
     drawWheel(canvas, ctx, segments, participants.map((p) => p.name), rotation);
   }, [segments, participants, rotation]);
 
+  // Если авто выключили (не победитель, не крутим) — убираем мем, чтобы вернуть «Крутить».
+  useEffect(() => {
+    if (!autoRunning && !spinning && !isChampion && spinVideo) hide();
+  }, [autoRunning, spinning, isChampion, spinVideo, hide]);
+
+  // Кнопка некликабельна, пока показывается мем (спин или пауза авто).
+  const buttonDisabled = participants.length === 0 || spinning || !!spinVideo;
+
   return (
     <div className="wheel-wrap">
       <canvas ref={canvasRef} className="wheel-canvas" />
@@ -71,9 +104,9 @@ export default function Wheel({ participants, spinning, durationSec, onSpinStart
       ) : (
         <SpinButton
           spinning={spinning}
-          disabled={spinning || participants.length === 0}
+          disabled={buttonDisabled}
           spinVideo={spinVideo}
-          onClick={runSpin}
+          onClick={onSpinRequest}
         />
       )}
     </div>

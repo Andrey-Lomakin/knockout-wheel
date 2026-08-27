@@ -73,7 +73,12 @@ export default function App() {
             durationSec={game.spinDuration}
             spinDuration={game.spinDuration}
             lastResult={game.lastResult}
+            autoSpin={game.autoSpin}
+            autoRunning={game.autoActive}
+            spinSignal={game.spinSignal}
             onDurationChange={game.setSpinDuration}
+            onAutoChange={game.toggleAuto}
+            onSpinRequest={game.pressSpin}
             onSpinStart={game.handleSpinStart}
             onSpinEnd={game.handleSpinEnd}
             onResetRound={game.resetRound}
