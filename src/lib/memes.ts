@@ -9,10 +9,11 @@ interface ManifestEntry {
 /** URL-ы всех мемов (загружаются один раз и кешируются). */
 export async function getMemeVideos(): Promise<string[]> {
   if (cache) return cache;
-  const res = await fetch('/memes/manifest.json');
+  const base = import.meta.env.BASE_URL; // уважает base: './' → относительные пути
+  const res = await fetch(`${base}memes/manifest.json`);
   if (!res.ok) return [];
   const data = (await res.json()) as Record<string, ManifestEntry>;
-  cache = Object.values(data).map((entry) => `/memes/${entry.video}`);
+  cache = Object.values(data).map((entry) => `${base}memes/${entry.video}`);
   return cache;
 }
 
