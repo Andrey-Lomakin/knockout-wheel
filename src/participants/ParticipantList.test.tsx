@@ -41,7 +41,6 @@ describe('ParticipantList — блокировка на время спина', 
 
     expect(input.readOnly).toBe(false);
     expect(buttons.every((b) => !b.disabled)).toBe(true);
-    expect(screen.queryByText('Колесо крутится — список заблокирован.')).toBeNull();
   });
 
   it('во время спина имя только для чтения, а кнопки строки недоступны', () => {
@@ -50,7 +49,6 @@ describe('ParticipantList — блокировка на время спина', 
 
     expect(input.readOnly).toBe(true);
     expect(buttons.every((b) => b.disabled)).toBe(true);
-    expect(screen.getByText('Колесо крутится — список заблокирован.')).toBeTruthy();
   });
 
   it('во время спина «Очистить» заблокирована, а «Поделиться» — нет', () => {

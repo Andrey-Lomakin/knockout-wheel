@@ -83,7 +83,6 @@ export default function ParticipantList(props: ParticipantListProps) {
           ))}
         </ul>
       )}
-      {props.locked && <p className="empty">Колесо крутится — список заблокирован.</p>}
     </section>
   );
 }
