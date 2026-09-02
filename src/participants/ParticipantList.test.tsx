@@ -40,7 +40,11 @@ describe('ParticipantList — блокировка на время спина', 
     const { input, buttons } = rowControls('Аня');
 
     expect(input.readOnly).toBe(false);
-    expect(buttons.every((b) => !b.disabled)).toBe(true);
+    // «−» при минимальном весе (×1) легально выключена — это не блокировка строки.
+    const minusButtons = buttons.filter((b) => b.title === 'Уменьшить вес');
+    const editableButtons = buttons.filter((b) => b.title !== 'Уменьшить вес');
+    expect(editableButtons.every((b) => !b.disabled)).toBe(true);
+    expect(minusButtons.every((b) => b.disabled)).toBe(true);
   });
 
   it('во время спина имя только для чтения, а кнопки строки недоступны', () => {
@@ -112,8 +116,8 @@ describe('ParticipantList — действия', () => {
     fireEvent.change(input, { target: { value: 'Анна' } });
     expect(props.onRename).toHaveBeenCalledWith('a', 'Анна');
 
-    fireEvent.click(screen.getAllByTitle(/Вес x2/)[0]);
-    expect(props.onWeight).toHaveBeenCalledWith('a', 2);
+    fireEvent.click(screen.getAllByTitle('Увеличить вес')[0]);
+    expect(props.onWeight).toHaveBeenCalledWith('a', 1.2);
 
     const toggle = buttons.find((b) => b.textContent === '✋')!;
     fireEvent.click(toggle);

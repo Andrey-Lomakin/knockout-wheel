@@ -58,7 +58,10 @@ export function drawWheel(
   }
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = '600 14px system-ui';
+  // Шрифт имён масштабируется от размера колеса (мин. 14px на маленьких экранах),
+  // чтобы надписи росли вместе с колесом и не вылезали за пределы сектора.
+  const fontSize = Math.max(14, Math.round(size * 0.035));
+  ctx.font = `600 ${fontSize}px system-ui`;
   ctx.textAlign = 'right';
   for (let i = 0; i < segments.length; i++) {
     const mid = (segments[i].start + segments[i].end) / 2;

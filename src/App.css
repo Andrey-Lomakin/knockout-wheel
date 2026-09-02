@@ -209,27 +209,40 @@
 
 .weights {
   display: flex;
+  align-items: center;
   gap: 4px;
   flex-shrink: 0;
 }
 
 .weight {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #334155;
   border-radius: 6px;
   background: #1e293b;
   color: #94a3b8;
-  font-size: 12px;
-  padding: 4px 6px;
+  font-size: 15px;
+  line-height: 1;
 }
 
-.weight:hover {
+.weight:hover:not(:disabled) {
   color: #e2e8f0;
 }
 
-.weight.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #fff;
+.weight-value {
+  min-width: 34px;
+  text-align: center;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 4px;
 }
 
 .remove {
@@ -455,9 +468,10 @@
 
 /* Wheel block */
 .wheel-wrap {
+  --wheel-size: min(680px, 94vw);
   position: relative;
-  width: min(460px, 90vw);
-  height: min(460px, 90vw);
+  width: var(--wheel-size);
+  height: var(--wheel-size);
 }
 
 .wheel-canvas {
@@ -486,14 +500,14 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 92px;
-  height: 92px;
+  width: calc(var(--wheel-size) * 0.25);
+  height: calc(var(--wheel-size) * 0.25);
   border-radius: 50%;
   border: none;
   background: linear-gradient(180deg, #3b82f6, #1d4ed8);
   color: #fff;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
   z-index: 3;
 }
