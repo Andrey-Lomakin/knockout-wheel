@@ -102,8 +102,56 @@ describe('useWheelGame — выбивание и подиум', () => {
     knockOut(result, 'Аня');
 
     expect(result.current.lastResult).toBe('Выбит: Аня');
+    // Выбывшая ещё висит на колесе — её сектор убирается только со стартом следующего спина.
+    expect(result.current.wheelParticipants.map((p) => p.name)).toEqual(['Аня', 'Боря', 'Витя', 'Гена']);
+    act(() => result.current.requestSpin());
     expect(result.current.wheelParticipants.map((p) => p.name)).toEqual(['Боря', 'Витя', 'Гена']);
     expect(result.current.participants.every((p) => p.enabled)).toBe(true);
+  });
+
+  it('последнего выбывшего не задерживает — чемпион остаётся на колесе один', () => {
+    const { result } = setup(['Аня', 'Боря']);
+    knockOut(result, 'Аня');
+
+    expect(result.current.wheelParticipants.map((p) => p.name)).toEqual(['Боря']);
+  });
+
+  it('карточка выбывания живёт до старта следующего спина', () => {
+    // Четверо: после первого выбывания места ещё не разыгрываются, карточка без медали.
+    const { result } = setup(['Аня', 'Боря', 'Витя', 'Гена']);
+    knockOut(result, 'Аня');
+
+    expect(result.current.lastOut).toEqual({ name: 'Аня', place: null });
+
+    act(() => result.current.requestSpin());
+    expect(result.current.lastOut).toBeNull();
+  });
+
+  it('«Активных» не считает задержавшегося выбывшего', () => {
+    const { result } = setup(['Аня', 'Боря', 'Витя']);
+    knockOut(result, 'Аня');
+
+    expect(result.current.activeCount).toBe(2);
+  });
+
+  it('если в паузе выключить предпоследнего, колесо показывает чемпиона, а не двоих', () => {
+    const { result } = setup(['Аня', 'Боря', 'Витя']);
+    knockOut(result, 'Аня');
+    const borya = result.current.participants.find((p) => p.name === 'Боря')!;
+    act(() => result.current.toggleEnabled(borya.id));
+
+    // Иначе на колесе остались бы «Аня (выбыла)» и «Витя», кнопка «Крутить» была бы активна
+    // и следующий спин выбил бы единственного оставшегося.
+    expect(result.current.wheelParticipants.map((p) => p.name)).toEqual(['Витя']);
+    expect(result.current.activeCount).toBe(1);
+  });
+
+  it('сброс раунда убирает задержавшегося выбывшего с колеса', () => {
+    const { result } = setup(['Аня', 'Боря', 'Витя']);
+    knockOut(result, 'Аня');
+    act(() => result.current.resetRound());
+
+    expect(result.current.wheelParticipants.map((p) => p.name)).toEqual(['Аня', 'Боря', 'Витя']);
   });
 
   it('заполняет подиум по ходу раунда', () => {

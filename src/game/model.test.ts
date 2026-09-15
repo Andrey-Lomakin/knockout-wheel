@@ -15,6 +15,7 @@ describe('computeElimination', () => {
     expect(out.eliminatedIds).toEqual(['a']);
     expect(out.stillActive).toBe(3);
     expect(out.lastResult).toBe('Выбит: Аня');
+    expect(out.announcement).toEqual({ name: 'Аня', place: null });
     expect(roster.every((p) => p.enabled)).toBe(true);
   });
 
@@ -22,12 +23,15 @@ describe('computeElimination', () => {
     const out = computeElimination(roster, ['a'], 'b', 'Боря');
     expect(out.stillActive).toBe(2);
     expect(out.lastResult).toBe('3 место: Боря');
+    expect(out.announcement).toEqual({ name: 'Боря', place: 3 });
   });
 
   it('при одном оставшемся объявляет победителя', () => {
     const out = computeElimination(roster, ['a', 'b'], 'c', 'Витя');
     expect(out.stillActive).toBe(1);
     expect(out.lastResult).toBe('1 место: Гена 🏆');
+    // На карточке объявляем победителя, а не выбывшего: серебро видно по медали в списке.
+    expect(out.announcement).toEqual({ name: 'Гена', place: 1 });
   });
 
   it('не считает выключенных вручную активными', () => {

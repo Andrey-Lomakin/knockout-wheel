@@ -22,6 +22,8 @@ function renderWheel(overrides: Partial<React.ComponentProps<typeof Wheel>> = {}
     durationSec: 3,
     autoRunning: false,
     spinSignal: 0,
+    lastOut: null,
+    dimmedId: null,
     onSpinRequest: vi.fn(),
     onSpinStart: vi.fn(),
     onSpinEnd: vi.fn(),
@@ -114,5 +116,30 @@ describe('Wheel — реакция на сигнал спина', () => {
     });
 
     expect(props.onSpinStart).not.toHaveBeenCalled();
+  });
+});
+
+describe('Wheel — карточка выбывания', () => {
+  it('показывает имя и подпись выбывшего', async () => {
+    renderWheel({ lastOut: { name: 'Боря', place: null } });
+    await flush();
+
+    expect(screen.getByText('Боря')).toBeTruthy();
+    expect(screen.getByText('выбывает')).toBeTruthy();
+  });
+
+  it('для победителя показывает медаль и подпись «победитель»', async () => {
+    renderWheel({ lastOut: { name: 'Гена', place: 1 } });
+    await flush();
+
+    expect(screen.getByText('🥇')).toBeTruthy();
+    expect(screen.getByText('победитель')).toBeTruthy();
+  });
+
+  it('без объявления карточки нет', async () => {
+    renderWheel();
+    await flush();
+
+    expect(screen.queryByText('выбывает')).toBeNull();
   });
 });

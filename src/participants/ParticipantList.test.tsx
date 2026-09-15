@@ -27,7 +27,7 @@ function renderList(overrides: Partial<React.ComponentProps<typeof ParticipantLi
   return props;
 }
 
-/** Все контролы строки участника: имя + кнопки веса, ✋/🙈 и удаления. */
+/** Все контролы строки участника: имя + кнопки множителя, ✋/🙈 и удаления. */
 function rowControls(name: string) {
   const input = screen.getByDisplayValue(name) as HTMLInputElement;
   const row = input.closest('li')!;
@@ -40,9 +40,9 @@ describe('ParticipantList — блокировка на время спина', 
     const { input, buttons } = rowControls('Аня');
 
     expect(input.readOnly).toBe(false);
-    // «−» при минимальном весе (×1) легально выключена — это не блокировка строки.
-    const minusButtons = buttons.filter((b) => b.title === 'Уменьшить вес');
-    const editableButtons = buttons.filter((b) => b.title !== 'Уменьшить вес');
+    // «−» при минимальном множителе (×1) легально выключена — это не блокировка строки.
+    const minusButtons = buttons.filter((b) => b.title === 'Уменьшить множитель');
+    const editableButtons = buttons.filter((b) => b.title !== 'Уменьшить множитель');
     expect(editableButtons.every((b) => !b.disabled)).toBe(true);
     expect(minusButtons.every((b) => b.disabled)).toBe(true);
   });
@@ -109,14 +109,14 @@ describe('ParticipantList — шаринг', () => {
 });
 
 describe('ParticipantList — действия', () => {
-  it('прокидывает переименование, вес, переключение и удаление', () => {
+  it('прокидывает переименование, множитель, переключение и удаление', () => {
     const props = renderList();
     const { input, buttons } = rowControls('Аня');
 
     fireEvent.change(input, { target: { value: 'Анна' } });
     expect(props.onRename).toHaveBeenCalledWith('a', 'Анна');
 
-    fireEvent.click(screen.getAllByTitle('Увеличить вес')[0]);
+    fireEvent.click(screen.getAllByTitle('Увеличить множитель')[0]);
     expect(props.onWeight).toHaveBeenCalledWith('a', 1.2);
 
     const toggle = buttons.find((b) => b.textContent === '✋')!;

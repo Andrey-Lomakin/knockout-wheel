@@ -16,8 +16,9 @@ interface ParticipantRowProps {
 }
 
 /**
- * Одна строка участника: номер + награда, имя, вес (степпер − / ×1.4 / +), вкл/выкл, удалить.
- * Вес меняется с шагом 0.2 в пределах [MIN_WEIGHT, MAX_WEIGHT].
+ * Одна строка участника: номер + награда, имя, множитель шанса (степпер − / ×1.4 / +),
+ * вкл/выкл, удалить.
+ * Множитель меняется с шагом 0.2 в пределах [MIN_WEIGHT, MAX_WEIGHT].
  */
 export default function ParticipantRow({
   participant: p,
@@ -48,27 +49,27 @@ export default function ParticipantRow({
         aria-label={`Имя участника ${index + 1}`}
       />
       {isOut && !medal && <span className="out-badge">выбыл</span>}
-      <div className="weights" aria-label={`Вес участника ${index + 1}`}>
+      <div className="weights" aria-label={`Множитель шанса участника ${index + 1}`}>
         <button
           className="weight step"
           onClick={() => onWeight(p.id, stepWeight(p.weight, -1))}
-          title="Уменьшить вес"
-          aria-label="Уменьшить вес"
+          title="Уменьшить множитель"
+          aria-label="Уменьшить множитель"
           disabled={!p.enabled || locked || p.weight <= MIN_WEIGHT}
         >
           −
         </button>
         <span
           className="weight-value"
-          title={`Вес ${formatWeight(p.weight)} — во столько раз больше шанс вылететь`}
+          title={`Множитель ${formatWeight(p.weight)} — во столько раз выше шанс дожить до победы`}
         >
           {formatWeight(p.weight)}
         </span>
         <button
           className="weight step"
           onClick={() => onWeight(p.id, stepWeight(p.weight, 1))}
-          title="Увеличить вес"
-          aria-label="Увеличить вес"
+          title="Увеличить множитель"
+          aria-label="Увеличить множитель"
           disabled={!p.enabled || locked || p.weight >= MAX_WEIGHT}
         >
           +

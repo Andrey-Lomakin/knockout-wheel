@@ -5,6 +5,8 @@ import { useMemes } from '../hooks/useMemes';
 import { buildSegments } from './wheelModel';
 import { drawWheel } from './wheelDraw';
 import SpinButton from './SpinButton';
+import OutBanner from './OutBanner';
+import type { Announcement } from '../game/model';
 
 interface WheelProps {
   participants: WheelParticipant[];
@@ -14,6 +16,10 @@ interface WheelProps {
   autoRunning: boolean;
   /** Инкрементируется при каждом запросе спина (кнопка или авто). */
   spinSignal: number;
+  /** Кого объявлять карточкой; null — карточки нет. */
+  lastOut: Announcement | null;
+  /** Задержавшийся на колесе выбывший: его сектор гасим. */
+  dimmedId: string | null;
   onSpinRequest: () => void;
   onSpinStart: () => void;
   onSpinEnd: (winner: WheelParticipant) => void;
@@ -26,6 +32,8 @@ export default function Wheel({
   durationSec,
   autoRunning,
   spinSignal,
+  lastOut,
+  dimmedId,
   onSpinRequest,
   onSpinStart,
   onSpinEnd,
@@ -72,6 +80,9 @@ export default function Wheel({
 
   const segments = useMemo(() => buildSegments(participants), [participants]);
 
+  // Индекс погасшего сектора: выбывший держится на колесе до следующего спина.
+  const dimmedIndex = dimmedId ? participants.findIndex((p) => p.id === dimmedId) : -1;
+
   // Победитель: остался ровно один участник → вместо кнопки показываем мем.
   const isChampion = participants.length === 1;
 
@@ -95,8 +106,9 @@ export default function Wheel({
       segments,
       participants.map((p) => p.name),
       rotation,
+      dimmedIndex,
     );
-  }, [segments, participants, rotation, size]);
+  }, [segments, participants, rotation, size, dimmedIndex]);
 
   // Если авто выключили (не победитель, не крутим) — убираем мем, чтобы вернуть «Крутить».
   useEffect(() => {
@@ -110,6 +122,7 @@ export default function Wheel({
     <div className="wheel-wrap">
       <canvas ref={canvasRef} className="wheel-canvas" />
       <div className="wheel-pointer" />
+      <OutBanner announcement={lastOut} />
       {isChampion ? (
         <div className="spin-btn champion-meme" aria-label="Победитель">
           {spinVideo ? (

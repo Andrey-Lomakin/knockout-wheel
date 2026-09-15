@@ -51,7 +51,7 @@ export default function App() {
       <header className="header">
         <h1>Колесо выбивания</h1>
         <span className="count">
-          Активных: <b>{game.wheelParticipants.length}</b> из {game.participants.length}
+          Активных: <b>{game.activeCount}</b> из {game.participants.length}
         </span>
       </header>
 
@@ -83,6 +83,8 @@ export default function App() {
             autoSpin={game.autoSpin}
             autoRunning={game.autoActive}
             spinSignal={game.spinSignal}
+            lastOut={game.lastOut}
+            dimmedId={game.pendingOutId}
             onDurationChange={game.setSpinDuration}
             onAutoChange={game.toggleAuto}
             onSpinRequest={game.pressSpin}

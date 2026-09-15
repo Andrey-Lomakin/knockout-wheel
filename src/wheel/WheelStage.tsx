@@ -1,4 +1,5 @@
 import type { WheelParticipant } from '../game/types';
+import type { Announcement } from '../game/model';
 import Wheel from './Wheel';
 import WheelControls from './WheelControls';
 import ResultPanel from './ResultPanel';
@@ -12,6 +13,8 @@ interface WheelStageProps {
   autoSpin: boolean;
   autoRunning: boolean;
   spinSignal: number;
+  lastOut: Announcement | null;
+  dimmedId: string | null;
   onDurationChange: (value: number) => void;
   onAutoChange: () => void;
   onSpinRequest: () => void;
@@ -37,6 +40,8 @@ export default function WheelStage(props: WheelStageProps) {
         durationSec={props.durationSec}
         autoRunning={props.autoRunning}
         spinSignal={props.spinSignal}
+        lastOut={props.lastOut}
+        dimmedId={props.dimmedId}
         onSpinRequest={props.onSpinRequest}
         onSpinStart={props.onSpinStart}
         onSpinEnd={props.onSpinEnd}

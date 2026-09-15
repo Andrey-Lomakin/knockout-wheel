@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { WheelParticipant } from '../game/types';
 import useLatest from './useLatest';
-import { buildSegments, computeTargetRotation, easeOutCubic, pickWeightedIndex } from '../wheel/wheelModel';
+import { buildSegments, computeTargetRotation, pickWeightedIndex, spinEase } from '../wheel/wheelModel';
 
 interface UseWheelAnimationParams {
   /** Актуальный состав колеса. */
@@ -40,7 +40,7 @@ export function useWheelAnimation(params: UseWheelAnimationParams) {
     const index = pickWeightedIndex(list);
     const segments = buildSegments(list);
     const segment = segments[index];
-    const target = computeTargetRotation(rotationRef.current, segment);
+    const target = computeTargetRotation(rotationRef.current, segment, durationSec);
     const duration = durationSec * 1000;
     const startTime = performance.now();
     const from = rotationRef.current;
@@ -51,7 +51,7 @@ export function useWheelAnimation(params: UseWheelAnimationParams) {
     cancelAnimationFrame(animRef.current);
     const animate = (now: number) => {
       const t = Math.min((now - startTime) / duration, 1);
-      const eased = easeOutCubic(t);
+      const eased = spinEase(t);
       const value = from + (target - from) * eased;
       rotationRef.current = value;
       setRotation(value);

@@ -18,6 +18,8 @@ export function drawWheel(
   segments: Segment[],
   names: string[],
   rotation: number,
+  /** Индекс погасшего сектора (выбывший ждёт следующего спина); -1 — такого нет. */
+  dimmedIndex = -1,
 ): void {
   if (size <= 0) return;
 
@@ -45,12 +47,13 @@ export function drawWheel(
   ctx.fillStyle = '#1e293b';
   ctx.fill();
 
-  for (const seg of segments) {
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.arc(0, 0, radius, seg.start, seg.end);
     ctx.closePath();
-    ctx.fillStyle = seg.color;
+    ctx.fillStyle = i === dimmedIndex ? '#334155' : seg.color;
     ctx.fill();
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 2;
@@ -63,11 +66,17 @@ export function drawWheel(
   const fontSize = Math.max(14, Math.round(size * 0.035));
   ctx.font = `600 ${fontSize}px system-ui`;
   ctx.textAlign = 'right';
+  // Подпись пропускается, если сектор для неё слишком узкий (высокий вес = узкая доля):
+  // сравниваем длину дуги на радиусе текста с высотой строки, иначе имена налезают друг на друга.
+  const textRadius = radius - 12;
   for (let i = 0; i < segments.length; i++) {
+    const span = segments[i].end - segments[i].start;
+    if (span * textRadius < fontSize * 1.1) continue;
     const mid = (segments[i].start + segments[i].end) / 2;
     ctx.save();
     ctx.rotate(mid);
-    ctx.translate(radius - 12, 4);
+    ctx.translate(textRadius, 4);
+    ctx.fillStyle = i === dimmedIndex ? 'rgba(226, 232, 240, 0.45)' : '#ffffff';
     ctx.fillText(truncate(names[i] ?? '', 14), 0, 0);
     ctx.restore();
   }
