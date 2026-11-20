@@ -116,6 +116,17 @@ describe('useWheelGame — выбивание и подиум', () => {
     expect(result.current.wheelParticipants.map((p) => p.name)).toEqual(['Боря']);
   });
 
+  it('не запускает спин и не стирает результат, когда остался один участник', () => {
+    const { result } = setup(['Аня', 'Боря']);
+    knockOut(result, 'Аня');
+    const afterSpin = result.current.spinSignal;
+
+    act(() => result.current.pressSpin());
+
+    expect(result.current.spinSignal).toBe(afterSpin);
+    expect(result.current.lastResult).toBe('1 место: Боря 🏆');
+  });
+
   it('карточка выбывания живёт до старта следующего спина', () => {
     // Четверо: после первого выбывания места ещё не разыгрываются, карточка без медали.
     const { result } = setup(['Аня', 'Боря', 'Витя', 'Гена']);
@@ -274,6 +285,41 @@ describe('useWheelGame — авто-прокрутка', () => {
 
     act(() => vi.advanceTimersByTime(AUTO_SPIN_PAUSE_MS * 3));
     expect(result.current.spinSignal).toBe(afterPress);
+  });
+
+  it('выключение участника в паузе останавливает серию и сохраняет чемпиона', () => {
+    const { result } = setup(['Аня', 'Боря', 'Витя']);
+    act(() => result.current.toggleAuto());
+    act(() => result.current.pressSpin());
+    knockOut(result, 'Аня');
+    const afterSpin = result.current.spinSignal;
+    const borya = result.current.participants.find((p) => p.name === 'Боря')!;
+
+    act(() => result.current.toggleEnabled(borya.id));
+    act(() => vi.advanceTimersByTime(AUTO_SPIN_PAUSE_MS * 3));
+
+    expect(result.current.spinSignal).toBe(afterSpin);
+    expect(result.current.autoActive).toBe(false);
+    expect(result.current.autoSpin).toBe(true);
+    expect(result.current.activeCount).toBe(1);
+    expect(result.current.lastResult).not.toBe('Все выбыли');
+  });
+
+  it('удаление участника в паузе останавливает серию', () => {
+    const { result } = setup(['Аня', 'Боря', 'Витя']);
+    act(() => result.current.toggleAuto());
+    act(() => result.current.pressSpin());
+    knockOut(result, 'Аня');
+    const afterSpin = result.current.spinSignal;
+    const borya = result.current.participants.find((p) => p.name === 'Боря')!;
+
+    act(() => result.current.remove(borya.id));
+    act(() => vi.advanceTimersByTime(AUTO_SPIN_PAUSE_MS * 3));
+
+    expect(result.current.spinSignal).toBe(afterSpin);
+    expect(result.current.autoActive).toBe(false);
+    expect(result.current.autoSpin).toBe(true);
+    expect(result.current.activeCount).toBe(1);
   });
 
   it('«Новый раунд» гасит запланированный авто-спин', () => {

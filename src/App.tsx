@@ -9,12 +9,14 @@ import './App.css';
 
 export default function App() {
   const game = useWheelGame();
-  const { replaceParticipants } = game;
+  const { replaceParticipants, spinning } = game;
 
   // Какой `search` уже применяли — чтобы та же ссылка не заменяла список повторно.
   const appliedSearchRef = useRef<string | null>(null);
 
   const applyFromUrl = useCallback(() => {
+    // Анимация держит снимок состава: замена во время спина смешала бы два раунда.
+    if (spinning) return;
     const search = window.location.search;
     if (search === appliedSearchRef.current) return;
     const names = parseShareNames(search);
@@ -24,7 +26,7 @@ export default function App() {
       // Убираем параметры из URL, чтобы при обновлении не вернулись старые юзеры.
       clearShareParams();
     }
-  }, [replaceParticipants]);
+  }, [replaceParticipants, spinning]);
 
   // Читаем параметры при открытии и при навигации (back/forward) в том же окне.
   useEffect(() => {
@@ -94,6 +96,11 @@ export default function App() {
           />
         </main>
       </div>
+      <footer className="footer">
+        <a href="https://github.com/Andrey-Lomakin/knockout-wheel" target="_blank" rel="noreferrer">
+          GitHub
+        </a>
+      </footer>
     </div>
   );
 }

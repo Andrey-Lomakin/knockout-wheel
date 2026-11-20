@@ -42,6 +42,10 @@ export default function ParticipantList(props: ParticipantListProps) {
     resetTimerRef.current = window.setTimeout(() => setCopyState('idle'), 1500);
   }, [onShare]);
 
+  const handleClear = () => {
+    if (window.confirm('Очистить список участников?')) props.onClear();
+  };
+
   // Медаль участника по его id (1-е/2-е/3-е место из подиума) или null.
   const medalFor = (id: string): string | null => {
     const idx = props.podium.findIndex((place) => place === id);
@@ -57,7 +61,7 @@ export default function ParticipantList(props: ParticipantListProps) {
             <button className={`link-btn ${copyState === 'failed' ? 'failed' : ''}`} onClick={handleShare}>
               {COPY_LABEL[copyState]}
             </button>
-            <button className="link-btn" onClick={props.onClear} disabled={props.locked}>
+            <button className="link-btn" onClick={handleClear} disabled={props.locked}>
               Очистить
             </button>
           </div>

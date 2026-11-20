@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ParticipantList from './ParticipantList';
 import type { Participant, Podium } from '../game/types';
 
@@ -108,7 +108,21 @@ describe('ParticipantList — шаринг', () => {
   });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('ParticipantList — действия', () => {
+  it('даёт кнопкам строки понятные доступные имена', () => {
+    renderList();
+
+    const toggle = screen.getByRole('button', { name: 'Выключить участника Аня' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Удалить участника Аня' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Уменьшить множитель участника Аня' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Увеличить множитель участника Аня' })).toBeTruthy();
+  });
+
   it('прокидывает переименование, множитель, переключение и удаление', () => {
     const props = renderList();
     const { input, buttons } = rowControls('Аня');
@@ -126,6 +140,18 @@ describe('ParticipantList — действия', () => {
     const remove = buttons.find((b) => b.title === 'Удалить')!;
     fireEvent.click(remove);
     expect(props.onRemove).toHaveBeenCalledWith('a');
+  });
+
+  it('не очищает список без подтверждения', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const props = renderList();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Очистить' }));
+    expect(props.onClear).not.toHaveBeenCalled();
+
+    vi.mocked(window.confirm).mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Очистить' }));
+    expect(props.onClear).toHaveBeenCalledTimes(1);
   });
 
   it('на пустом списке прячет действия и показывает подсказку', () => {

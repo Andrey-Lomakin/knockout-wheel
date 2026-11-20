@@ -116,11 +116,13 @@ export default function Wheel({
   }, [autoRunning, spinning, isChampion, spinVideo, hide]);
 
   // Кнопка некликабельна, пока показывается мем (спин или пауза авто).
-  const buttonDisabled = participants.length === 0 || spinning || !!spinVideo;
+  const isEmpty = participants.length === 0;
+  const buttonDisabled = isEmpty || spinning || !!spinVideo;
 
   return (
-    <div className="wheel-wrap">
+    <div className={`wheel-wrap ${isEmpty ? 'is-empty' : ''}`}>
       <canvas ref={canvasRef} className="wheel-canvas" />
+      {isEmpty && <p className="wheel-empty">Добавьте участников</p>}
       <div className="wheel-pointer" />
       <OutBanner announcement={lastOut} />
       {isChampion ? (

@@ -56,6 +56,7 @@ export function useWheelGame() {
     const out = new Set(eliminatedIds);
     return participants.filter((p) => p.enabled && !out.has(p.id));
   }, [participants, eliminatedIds]);
+  const latestActiveCount = useLatest(activeParticipants.length);
 
   // Состав колеса = активные плюс «задержавшийся» выбывший с прошлого спина.
   // Когда активный остался один, задержку снимаем: иначе колесо показывало бы двоих,
@@ -78,20 +79,29 @@ export function useWheelGame() {
     }
   }, []);
 
+  // Останавливает текущую серию, но оставляет режим авто-прокрутки включённым.
+  const stopAutoSequence = useCallback(() => {
+    cancelAutoTimer();
+    setAutoActive(false);
+  }, [cancelAutoTimer]);
+
   // Запрос на один спин: колесо следит за изменением `spinSignal`.
   const requestSpin = useCallback(() => {
+    if (latestActiveCount() < 2) return false;
+
     // Убираем с колеса выбывшего на прошлом спине — ровно в момент старта нового.
     setPendingOutId(null);
     setSpinSignal((s) => s + 1);
     setLastResult(null);
     setLastOut(null);
-  }, []);
+    return true;
+  }, [latestActiveCount]);
 
   // Нажатие кнопки в колесе: запускает последовательность авто (если режим включён)
   // или делает одиночный спин. Именно так авто начинает крутить — по кнопке, не автоматически.
   const pressSpin = useCallback(() => {
+    if (!requestSpin()) return;
     if (autoSpinRef()) setAutoActive(true);
-    requestSpin();
   }, [requestSpin, autoSpinRef]);
 
   // Планирует следующий авто-спин через паузу (пока режим и последовательность активны).
@@ -99,16 +109,16 @@ export function useWheelGame() {
     cancelAutoTimer();
     autoTimerRef.current = window.setTimeout(() => {
       autoTimerRef.current = 0;
-      if (autoSpinRef() && autoActiveRef()) requestSpin();
+      if (!autoSpinRef() || !autoActiveRef()) return;
+      if (!requestSpin()) setAutoActive(false);
     }, AUTO_SPIN_PAUSE_MS);
   }, [cancelAutoTimer, requestSpin, autoSpinRef, autoActiveRef]);
 
   // Останавливает авто-прокрутку (используется при сбросах/смене списка и переключении режима).
   const stopAuto = useCallback(() => {
-    cancelAutoTimer();
-    setAutoActive(false);
+    stopAutoSequence();
     setAutoSpin(false);
-  }, [cancelAutoTimer]);
+  }, [stopAutoSequence]);
 
   const addParticipants = useCallback(
     (names: string[]) => {
@@ -147,14 +157,22 @@ export function useWheelGame() {
     setParticipants((prev) => prev.map((p) => (p.id === id ? { ...p, weight } : p)));
   }, []);
 
-  const toggleEnabled = useCallback((id: string) => {
-    setParticipants((prev) => prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)));
-  }, []);
+  const toggleEnabled = useCallback(
+    (id: string) => {
+      stopAutoSequence();
+      setParticipants((prev) => prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)));
+    },
+    [stopAutoSequence],
+  );
 
-  const remove = useCallback((id: string) => {
-    setParticipants((prev) => prev.filter((p) => p.id !== id));
-    setEliminatedIds((prev) => prev.filter((eliminatedId) => eliminatedId !== id));
-  }, []);
+  const remove = useCallback(
+    (id: string) => {
+      stopAutoSequence();
+      setParticipants((prev) => prev.filter((p) => p.id !== id));
+      setEliminatedIds((prev) => prev.filter((eliminatedId) => eliminatedId !== id));
+    },
+    [stopAutoSequence],
+  );
 
   const clear = useCallback(() => {
     stopAuto();
@@ -175,10 +193,9 @@ export function useWheelGame() {
 
   // Переключает режим авто-прокрутки (не запускает сам — старт по кнопке колеса).
   const toggleAuto = useCallback(() => {
-    cancelAutoTimer();
-    setAutoActive(false);
+    stopAutoSequence();
     setAutoSpin((prev) => !prev);
-  }, [cancelAutoTimer]);
+  }, [stopAutoSequence]);
 
   // Чистим таймер при размонтировании.
   useEffect(() => () => cancelAutoTimer(), [cancelAutoTimer]);

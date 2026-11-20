@@ -23,6 +23,7 @@ export default function MusicPlayer() {
           <div className="music-input">
             <input
               type="text"
+              aria-label="Ссылка на трек Яндекс Музыки"
               placeholder="Ссылка на трек: music.yandex.ru/album/…/track/…"
               value={link}
               onChange={(e) => setLink(e.target.value)}

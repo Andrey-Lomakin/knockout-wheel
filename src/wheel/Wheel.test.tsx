@@ -59,6 +59,7 @@ describe('Wheel — кнопка спина', () => {
     await flush();
 
     expect((screen.getByText('Крутить') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Добавьте участников')).toBeTruthy();
   });
 
   it('во время спина показывает «Крутим…» и не кликается', async () => {

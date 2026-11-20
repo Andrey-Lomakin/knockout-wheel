@@ -54,7 +54,7 @@ export default function ParticipantRow({
           className="weight step"
           onClick={() => onWeight(p.id, stepWeight(p.weight, -1))}
           title="Уменьшить множитель"
-          aria-label="Уменьшить множитель"
+          aria-label={`Уменьшить множитель участника ${p.name}`}
           disabled={!p.enabled || locked || p.weight <= MIN_WEIGHT}
         >
           −
@@ -69,7 +69,7 @@ export default function ParticipantRow({
           className="weight step"
           onClick={() => onWeight(p.id, stepWeight(p.weight, 1))}
           title="Увеличить множитель"
-          aria-label="Увеличить множитель"
+          aria-label={`Увеличить множитель участника ${p.name}`}
           disabled={!p.enabled || locked || p.weight >= MAX_WEIGHT}
         >
           +
@@ -79,11 +79,19 @@ export default function ParticipantRow({
         className={`toggle ${p.enabled ? 'on' : 'off'}`}
         onClick={() => onToggle(p.id)}
         title={p.enabled ? 'Выключить (не участвует в колесе)' : 'Включить'}
+        aria-label={p.enabled ? `Выключить участника ${p.name}` : `Включить участника ${p.name}`}
+        aria-pressed={p.enabled}
         disabled={locked}
       >
         {p.enabled ? '✋' : '🙈'}
       </button>
-      <button className="remove" onClick={() => onRemove(p.id)} title="Удалить" disabled={locked}>
+      <button
+        className="remove"
+        onClick={() => onRemove(p.id)}
+        title="Удалить"
+        aria-label={`Удалить участника ${p.name}`}
+        disabled={locked}
+      >
         ✕
       </button>
     </li>
