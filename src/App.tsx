@@ -5,10 +5,13 @@ import ParticipantList from './participants/ParticipantList';
 import WheelStage from './wheel/WheelStage';
 import MusicPlayer from './music/MusicPlayer';
 import { buildShareUrl, clearShareParams, parseShareNames } from './lib/share';
+import SeasonalDecorations from './seasonal/SeasonalDecorations';
+import { getSeasonalTheme } from './seasonal/seasonalModel';
 import './App.css';
 
 export default function App() {
   const game = useWheelGame();
+  const seasonalTheme = getSeasonalTheme();
   const { replaceParticipants, spinning } = game;
 
   // Какой `search` уже применяли — чтобы та же ссылка не заменяла список повторно.
@@ -49,7 +52,8 @@ export default function App() {
   }, [game.participants]);
 
   return (
-    <div className="page">
+    <div className={`page ${seasonalTheme.wheelLights ? 'season-wheel-lights' : ''} ${seasonalTheme.snowCaps ? 'season-snow-caps' : ''}`}>
+      <SeasonalDecorations theme={seasonalTheme} />
       <header className="header">
         <h1>Колесо выбивания</h1>
         <span className="count">
@@ -78,6 +82,7 @@ export default function App() {
         <main className="stage">
           <WheelStage
             participants={game.wheelParticipants}
+            activeCount={game.activeCount}
             spinning={game.spinning}
             durationSec={game.spinDuration}
             spinDuration={game.spinDuration}
@@ -85,6 +90,7 @@ export default function App() {
             autoSpin={game.autoSpin}
             autoRunning={game.autoActive}
             spinSignal={game.spinSignal}
+            roundRevision={game.roundRevision}
             lastOut={game.lastOut}
             dimmedId={game.pendingOutId}
             onDurationChange={game.setSpinDuration}

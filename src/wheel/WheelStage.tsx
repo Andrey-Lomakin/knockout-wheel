@@ -6,6 +6,7 @@ import ResultPanel from './ResultPanel';
 
 interface WheelStageProps {
   participants: WheelParticipant[];
+  activeCount: number;
   spinning: boolean;
   durationSec: number;
   spinDuration: number;
@@ -13,6 +14,7 @@ interface WheelStageProps {
   autoSpin: boolean;
   autoRunning: boolean;
   spinSignal: number;
+  roundRevision: number;
   lastOut: Announcement | null;
   dimmedId: string | null;
   onDurationChange: (value: number) => void;
@@ -36,10 +38,12 @@ export default function WheelStage(props: WheelStageProps) {
       />
       <Wheel
         participants={props.participants}
+        activeCount={props.activeCount}
         spinning={props.spinning}
         durationSec={props.durationSec}
         autoRunning={props.autoRunning}
         spinSignal={props.spinSignal}
+        roundRevision={props.roundRevision}
         lastOut={props.lastOut}
         dimmedId={props.dimmedId}
         onSpinRequest={props.onSpinRequest}

@@ -6,16 +6,23 @@ import { buildSegments } from './wheelModel';
 import { drawWheel } from './wheelDraw';
 import SpinButton from './SpinButton';
 import OutBanner from './OutBanner';
+import CasinoOverlay from './casino/CasinoOverlay';
+import { useCasinoSpin } from './casino/useCasinoSpin';
+import { CASINO_CONFIG } from './casino/casinoConfig';
 import type { Announcement } from '../game/model';
 
 interface WheelProps {
   participants: WheelParticipant[];
+  /** Активные без задержавшегося выбывшего сектора. */
+  activeCount: number;
   spinning: boolean;
   durationSec: number;
   /** Идёт ли последовательность авто-спинов. */
   autoRunning: boolean;
   /** Инкрементируется при каждом запросе спина (кнопка или авто). */
   spinSignal: number;
+  /** Меняется при явном сбросе или замене раунда. */
+  roundRevision: number;
   /** Кого объявлять карточкой; null — карточки нет. */
   lastOut: Announcement | null;
   /** Задержавшийся на колесе выбывший: его сектор гасим. */
@@ -28,10 +35,12 @@ interface WheelProps {
 /** Canvas-колесо: рисует сегменты и анимирует вращение. */
 export default function Wheel({
   participants,
+  activeCount,
   spinning,
   durationSec,
   autoRunning,
   spinSignal,
+  roundRevision,
   lastOut,
   dimmedId,
   onSpinRequest,
@@ -43,12 +52,42 @@ export default function Wheel({
   const [size, setSize] = useState(0);
 
   const { spinVideo, hasVideos, showRandom, hide } = useMemes();
-  const { rotation, runSpin } = useWheelAnimation({
+  const {
+    phase: casinoPhase,
+    outcome: casinoOutcome,
+    beginSpin: beginCasinoSpin,
+    beginNormalSpin: beginNormalCasinoSpin,
+    completeSpin: completeCasinoSpin,
+    reset: resetCasinoSpin,
+    getState: getCasinoState,
+  } = useCasinoSpin();
+  const forceNormalSpinRef = useRef(false);
+  const { rotation, runSpin, cancelPendingRespin } = useWheelAnimation({
     participants,
     durationSec,
     spinning,
-    onSpinStart,
-    onSpinEnd,
+    onSpinStart: () => {
+      if (forceNormalSpinRef.current) {
+        forceNormalSpinRef.current = false;
+        beginNormalCasinoSpin();
+      } else {
+        beginCasinoSpin(activeCount === 2);
+      }
+      onSpinStart();
+    },
+    onSpinEnd: (winner) => {
+      const casinoState = getCasinoState();
+      if (casinoState.phase === 'spinning' && casinoState.outcome?.isJackpot) {
+        completeCasinoSpin();
+        forceNormalSpinRef.current = true;
+        return {
+          respinDurationSec: CASINO_CONFIG.jackpotRespinSec,
+          respinDelayMs: CASINO_CONFIG.jackpotPauseMs,
+        };
+      }
+      completeCasinoSpin();
+      onSpinEnd(winner);
+    },
     onMemeStart: showRandom,
     // Во время авто-последовательности мем спина остаётся на паузе (тот же), не очищаем.
     // В ручном режиме — очищаем после каждого спина.
@@ -93,6 +132,12 @@ export default function Wheel({
     if (isChampion && hasVideos && !spinVideo) showRandom();
   }, [isChampion, hasVideos, spinVideo, showRandom]);
 
+  useEffect(() => {
+    forceNormalSpinRef.current = false;
+    cancelPendingRespin();
+    resetCasinoSpin();
+  }, [roundRevision, resetCasinoSpin, cancelPendingRespin]);
+
   // Отрисовка колеса при изменении поворота, состава или размера.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -125,6 +170,7 @@ export default function Wheel({
       {isEmpty && <p className="wheel-empty">Добавьте участников</p>}
       <div className="wheel-pointer" />
       <OutBanner announcement={lastOut} />
+      <CasinoOverlay phase={casinoPhase} outcome={casinoOutcome} durationSec={durationSec} />
       {isChampion ? (
         <div className="spin-btn champion-meme" aria-label="Победитель">
           {spinVideo ? (

@@ -1,9 +1,7 @@
 import type { Announcement } from '../game/model';
+import { getPlaceIcon } from '../lib/placeIcons';
 
-const PLACES = {
-  1: { medal: '🥇', caption: 'победитель' },
-  3: { medal: '🥉', caption: '3 место' },
-} as const;
+const CAPTIONS = { 1: 'победитель', 3: '3 место' } as const;
 
 /**
  * Карточка о том, кто выбыл (или кто победил), поверх нижней части колеса.
@@ -14,13 +12,13 @@ const PLACES = {
 export default function OutBanner({ announcement }: { announcement: Announcement | null }) {
   if (!announcement) return null;
 
-  const place = announcement.place ? PLACES[announcement.place] : null;
+  const place = announcement.place;
 
   return (
     <div className="out-banner">
-      <span className="out-banner-medal">{place ? place.medal : '✖'}</span>
+      <span className="out-banner-medal">{place ? getPlaceIcon(place) : '✖'}</span>
       <span className="out-banner-name">{announcement.name}</span>
-      <span className="out-banner-caption">{place ? place.caption : 'выбывает'}</span>
+      <span className="out-banner-caption">{place ? CAPTIONS[place] : 'выбывает'}</span>
     </div>
   );
 }

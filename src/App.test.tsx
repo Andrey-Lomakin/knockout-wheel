@@ -26,6 +26,7 @@ function makeGame(spinning: boolean): ReturnType<typeof useWheelGame> {
     autoSpin: false,
     autoActive: false,
     spinSignal: 0,
+    roundRevision: 0,
     setSpinDuration: vi.fn(),
     addParticipants: vi.fn(),
     replaceParticipants: vi.fn(),

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Participant, Podium, Weight } from '../game/types';
 import ParticipantRow from './ParticipantRow';
+import { getPlaceIcon } from '../lib/placeIcons';
+import type { MedalPlace } from '../lib/placeIcons';
 
 interface ParticipantListProps {
   participants: Participant[];
@@ -16,8 +18,6 @@ interface ParticipantListProps {
   /** Возвращает, удалось ли скопировать ссылку в буфер обмена. */
   onShare: () => Promise<boolean>;
 }
-
-const MEDALS = ['🥇', '🥈', '🥉'];
 
 type CopyState = 'idle' | 'copied' | 'failed';
 
@@ -49,7 +49,7 @@ export default function ParticipantList(props: ParticipantListProps) {
   // Медаль участника по его id (1-е/2-е/3-е место из подиума) или null.
   const medalFor = (id: string): string | null => {
     const idx = props.podium.findIndex((place) => place === id);
-    return idx >= 0 ? MEDALS[idx] : null;
+    return idx >= 0 ? getPlaceIcon((idx + 1) as MedalPlace) : null;
   };
 
   return (

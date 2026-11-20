@@ -38,6 +38,8 @@ export function useWheelGame() {
   // Идёт ли последовательность авто-спинов (стартует по кнопке колеса).
   const [autoActive, setAutoActive] = useState(false);
   const [spinSignal, setSpinSignal] = useState(0);
+  // Явная версия раунда для сброса визуальных эффектов без чтения чужого состояния.
+  const [roundRevision, setRoundRevision] = useState(0);
   const autoSpinRef = useLatest(autoSpin);
   const autoActiveRef = useLatest(autoActive);
   const autoTimerRef = useRef<number>(0);
@@ -125,6 +127,7 @@ export function useWheelGame() {
       if (names.length === 0) return;
       stopAuto();
       const entries = names.map((n) => createEntry(n));
+      setRoundRevision((revision) => revision + 1);
       setParticipants((prev) => [...prev, ...entries]);
       setEliminatedIds([]);
       setPendingOutId(null);
@@ -140,6 +143,7 @@ export function useWheelGame() {
       if (names.length === 0) return;
       stopAuto();
       const entries = names.map((n) => createEntry(n));
+      setRoundRevision((revision) => revision + 1);
       setParticipants(entries);
       setEliminatedIds([]);
       setPendingOutId(null);
@@ -176,6 +180,7 @@ export function useWheelGame() {
 
   const clear = useCallback(() => {
     stopAuto();
+    setRoundRevision((revision) => revision + 1);
     setParticipants([]);
     setEliminatedIds([]);
     setPendingOutId(null);
@@ -185,6 +190,7 @@ export function useWheelGame() {
 
   const resetRound = useCallback(() => {
     stopAuto();
+    setRoundRevision((revision) => revision + 1);
     setEliminatedIds([]);
     setPendingOutId(null);
     setLastResult(null);
@@ -255,6 +261,7 @@ export function useWheelGame() {
     autoSpin,
     autoActive,
     spinSignal,
+    roundRevision,
     setSpinDuration,
     addParticipants,
     replaceParticipants,

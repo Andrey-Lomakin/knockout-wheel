@@ -205,8 +205,10 @@ describe('useWheelGame — выбивание и подиум', () => {
     const { result } = setup(['Аня', 'Боря', 'Витя']);
     knockOut(result, 'Аня');
 
+    const beforeReset = result.current.roundRevision;
     act(() => result.current.resetRound());
 
+    expect(result.current.roundRevision).toBe(beforeReset + 1);
     expect(result.current.eliminatedIds).toEqual([]);
     expect(result.current.podium).toEqual([null, null, null]);
     expect(result.current.lastResult).toBeNull();

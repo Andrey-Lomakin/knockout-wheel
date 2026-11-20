@@ -11,7 +11,7 @@ interface UseWheelAnimationParams {
   /** Идёт ли спин прямо сейчас. */
   spinning: boolean;
   onSpinStart: () => void;
-  onSpinEnd: (p: WheelParticipant) => void;
+  onSpinEnd: (p: WheelParticipant) => { respinDurationSec: number; respinDelayMs?: number } | void;
   /** Вызывается, когда начался спин (например, показать мем). */
   onMemeStart?: () => void;
   /** Вызывается, когда спин закончился (убрать мем). */
@@ -28,11 +28,13 @@ export function useWheelAnimation(params: UseWheelAnimationParams) {
   const [rotation, setRotation] = useState(0);
   const rotationRef = useRef(0);
   const animRef = useRef(0);
+  const respinTimerRef = useRef<number>(0);
 
-  const runSpin = useCallback(() => {
-    const { participants, durationSec, spinning, onSpinStart, onSpinEnd, onMemeStart, onMemeEnd } = paramsRef();
+  const runSpin = useCallback((options: { durationSec?: number; ignoreSpinning?: boolean } = {}) => {
+    const { participants, spinning, onSpinStart, onSpinEnd, onMemeStart, onMemeEnd } = paramsRef();
+    const durationSec = options.durationSec ?? paramsRef().durationSec;
 
-    if (spinning || participants.length === 0) return;
+    if ((spinning && !options.ignoreSpinning) || participants.length === 0) return;
 
     // Состав фиксируется на старте: победитель и целевой угол считаются по нему же,
     // иначе указатель и объявленный выбывший могли бы разойтись.
@@ -63,14 +65,26 @@ export function useWheelAnimation(params: UseWheelAnimationParams) {
         setRotation(target);
         onMemeEnd?.();
         const winner = list[index];
-        if (winner) onSpinEnd(winner);
+        const action = winner ? onSpinEnd(winner) : undefined;
+        if (action) {
+          respinTimerRef.current = window.setTimeout(() => {
+            runSpin({ durationSec: action.respinDurationSec, ignoreSpinning: true });
+          }, action.respinDelayMs ?? 0);
+        }
       }
     };
     animRef.current = requestAnimationFrame(animate);
   }, [paramsRef]);
 
-  // Отменяем анимацию при размонтировании.
-  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+  // Отменяем анимацию и отложенный респин при размонтировании.
+  useEffect(() => () => {
+    cancelAnimationFrame(animRef.current);
+    window.clearTimeout(respinTimerRef.current);
+  }, []);
 
-  return { rotation, runSpin };
+  const cancelPendingRespin = useCallback(() => {
+    window.clearTimeout(respinTimerRef.current);
+  }, []);
+
+  return { rotation, runSpin, cancelPendingRespin };
 }

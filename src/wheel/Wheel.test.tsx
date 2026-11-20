@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Wheel from './Wheel';
 import type { WheelParticipant } from '../game/types';
+import { getPlaceIcon } from '../lib/placeIcons';
 
 // Мемы тянутся fetch-ем из public/ — в тестах подменяем на управляемый список.
 const memes = vi.hoisted(() => ({ videos: [] as string[] }));
@@ -18,10 +19,12 @@ function wheelParticipants(...names: string[]): WheelParticipant[] {
 function renderWheel(overrides: Partial<React.ComponentProps<typeof Wheel>> = {}) {
   const props = {
     participants: wheelParticipants('Аня', 'Боря', 'Витя'),
+    activeCount: 3,
     spinning: false,
     durationSec: 3,
     autoRunning: false,
     spinSignal: 0,
+    roundRevision: 0,
     lastOut: null,
     dimmedId: null,
     onSpinRequest: vi.fn(),
@@ -40,6 +43,11 @@ async function flush() {
 
 beforeEach(() => {
   memes.videos = [];
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('Wheel — кнопка спина', () => {
@@ -108,6 +116,148 @@ describe('Wheel — реакция на сигнал спина', () => {
     expect(props.onSpinStart).toHaveBeenCalledTimes(1);
   });
 
+  it('показывает барабаны снизу и останавливает их к концу колеса', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    memes.videos = ['memes/mp4/1.mp4'];
+    const { rerender, props } = renderWheel({ autoRunning: true, participants: wheelParticipants('Аня', 'Боря', 'Витя'), activeCount: 2, dimmedId: 'p2' });
+    await flush();
+
+    await act(async () => {
+      rerender(<Wheel {...props} spinSignal={1} />);
+    });
+
+    expect(screen.getByText('LUCKY SPIN')).toBeTruthy();
+    expect(document.querySelector('video.spin-video')).toBeTruthy();
+    const tracks = Array.from(document.querySelectorAll<HTMLElement>('.casino-reel-track'));
+    expect(tracks.map((track) => track.style.animationDuration)).toEqual(['2100ms', '2550ms', '3000ms']);
+    expect(props.onSpinStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('при джекпоте никого не выбивает и запускает обычный спин на 3 секунды', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    const { rerender, props } = renderWheel({ participants: wheelParticipants('Аня', 'Боря'), activeCount: 2 });
+    await flush();
+
+    await act(async () => {
+      rerender(<Wheel {...props} spinSignal={1} />);
+    });
+    now = 3000;
+    await act(async () => frames[0](now));
+
+    expect(props.onSpinEnd).not.toHaveBeenCalled();
+    expect(props.onSpinStart).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('JACKPOT')).toBeTruthy();
+    expect(frames).toHaveLength(1);
+
+    await act(async () => vi.advanceTimersByTime(699));
+    expect(props.onSpinStart).toHaveBeenCalledTimes(1);
+    await act(async () => vi.advanceTimersByTime(1));
+    expect(props.onSpinStart).toHaveBeenCalledTimes(2);
+    expect(document.querySelector('.casino-layer')).toBeNull();
+    expect(frames).toHaveLength(2);
+
+    now = 5999;
+    await act(async () => frames[1](now));
+    expect(props.onSpinEnd).not.toHaveBeenCalled();
+
+    now = 6000;
+    await act(async () => frames[2](now));
+    expect(props.onSpinEnd).toHaveBeenCalledTimes(1);
+    expect(props.onSpinEnd).toHaveBeenCalledWith(props.participants[0]);
+    expect(frames).toHaveLength(3);
+  });
+
+  it('отменяет отложенный респин при смене раунда', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    const { rerender, props } = renderWheel({ participants: wheelParticipants('Аня', 'Боря'), activeCount: 2 });
+    await flush();
+
+    rerender(<Wheel {...props} spinSignal={1} />);
+    now = 3000;
+    await act(async () => frames[0](now));
+    expect(screen.getByText('JACKPOT')).toBeTruthy();
+
+    rerender(<Wheel {...props} spinSignal={1} roundRevision={1} />);
+    await act(async () => vi.advanceTimersByTime(1000));
+
+    expect(props.onSpinStart).toHaveBeenCalledTimes(1);
+    expect(frames).toHaveLength(1);
+    expect(document.querySelector('.casino-layer')).toBeNull();
+  });
+
+  it('без джекпота выбивает сразу и сбрасывается по roundRevision', async () => {
+    const randomValues = [0.1, 0.1, 0.1, 0.9];
+    vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1);
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    const { rerender, props } = renderWheel({ participants: wheelParticipants('Аня', 'Боря'), activeCount: 2 });
+    await flush();
+
+    await act(async () => {
+      rerender(<Wheel {...props} spinSignal={1} />);
+    });
+    expect(frames).toHaveLength(1);
+    now = 3000;
+    await act(async () => frames[0](now));
+
+    expect(props.onSpinEnd).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('ЕЩЁ РАЗ')).toBeTruthy();
+    const reels = Array.from(document.querySelectorAll('.casino-reel'));
+    expect(reels.map((reel) => reel.getAttribute('data-final-symbol'))).toEqual(['7️⃣', '7️⃣', '🍒']);
+
+    rerender(<Wheel {...props} participants={wheelParticipants('Аня')} spinSignal={1} />);
+    expect(screen.getByText('ЕЩЁ РАЗ')).toBeTruthy();
+    rerender(<Wheel {...props} spinSignal={1} roundRevision={1} />);
+    expect(document.querySelector('.casino-layer')).toBeNull();
+  });
+
+  it('не показывает casino, пока участников больше двух', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    const { rerender, props } = renderWheel();
+    await flush();
+
+    await act(async () => {
+      rerender(<Wheel {...props} spinSignal={1} />);
+    });
+
+    expect(screen.queryByText('LUCKY SPIN')).toBeNull();
+    expect(document.querySelector('.casino-layer')).toBeNull();
+  });
+
+  it('не запускает барабаны, если анимация отклонила пустой состав', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    const { rerender, props } = renderWheel({ participants: [] });
+    await flush();
+
+    await act(async () => {
+      rerender(<Wheel {...props} spinSignal={1} />);
+    });
+
+    expect(props.onSpinStart).not.toHaveBeenCalled();
+    expect(document.querySelector('.casino-layer')).toBeNull();
+  });
+
   it('не перезапускает спин, если сигнал не изменился', async () => {
     const { rerender, props } = renderWheel({ spinSignal: 1 });
     await flush();
@@ -133,7 +283,7 @@ describe('Wheel — карточка выбывания', () => {
     renderWheel({ lastOut: { name: 'Гена', place: 1 } });
     await flush();
 
-    expect(screen.getByText('🥇')).toBeTruthy();
+    expect(screen.getByText(getPlaceIcon(1))).toBeTruthy();
     expect(screen.getByText('победитель')).toBeTruthy();
   });
 
