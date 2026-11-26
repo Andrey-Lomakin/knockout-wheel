@@ -14,8 +14,9 @@ export default function CasinoOverlay({ phase, outcome, durationSec }: CasinoOve
   if (phase === 'idle' || !outcome) return null;
 
   const spinEndMs = durationSec * 1000;
+  // После смешанной комбинации подписи нет: участник уже выбыл, «ещё раз» было бы неверно.
   const title = phase === 'result'
-    ? outcome.isJackpot ? CASINO_CONFIG.label : CASINO_CONFIG.missLabel
+    ? outcome.isJackpot ? CASINO_CONFIG.label : null
     : 'LUCKY SPIN';
   const resultClass = phase === 'result' && outcome.isJackpot ? 'is-jackpot' : '';
 
@@ -23,7 +24,7 @@ export default function CasinoOverlay({ phase, outcome, durationSec }: CasinoOve
     <div className="casino-layer" aria-hidden="true">
       <div className="casino-frame" />
       <div className={`casino-machine ${phase === 'result' ? 'is-result' : ''} ${resultClass}`}>
-        <span className="casino-machine-title">{title}</span>
+        {title !== null && <span className="casino-machine-title">{title}</span>}
         <div className="casino-reels">
           {outcome.reels.map((symbol, index) => (
             <SlotReel

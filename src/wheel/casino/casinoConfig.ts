@@ -4,7 +4,6 @@ export const CASINO_CONFIG = {
   jackpot: ['7️⃣', '7️⃣', '7️⃣'],
   miss: ['7️⃣', '7️⃣', '🍒'],
   label: 'JACKPOT',
-  missLabel: 'ЕЩЁ РАЗ',
   reelStopOffsetsMs: [900, 450, 0],
   jackpotRespinSec: 3,
   jackpotPauseMs: 700,

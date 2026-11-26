@@ -222,12 +222,15 @@ describe('Wheel — реакция на сигнал спина', () => {
     await act(async () => frames[0](now));
 
     expect(props.onSpinEnd).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('ЕЩЁ РАЗ')).toBeTruthy();
+    // Панель остаётся, но без подписи: участник уже выбыл.
+    expect(document.querySelector('.casino-layer')).not.toBeNull();
+    expect(document.querySelector('.casino-machine-title')).toBeNull();
     const reels = Array.from(document.querySelectorAll('.casino-reel'));
     expect(reels.map((reel) => reel.getAttribute('data-final-symbol'))).toEqual(['7️⃣', '7️⃣', '🍒']);
 
     rerender(<Wheel {...props} participants={wheelParticipants('Аня')} spinSignal={1} />);
-    expect(screen.getByText('ЕЩЁ РАЗ')).toBeTruthy();
+    expect(document.querySelector('.casino-layer')).not.toBeNull();
+    expect(document.querySelector('.casino-machine-title')).toBeNull();
     rerender(<Wheel {...props} spinSignal={1} roundRevision={1} />);
     expect(document.querySelector('.casino-layer')).toBeNull();
   });
